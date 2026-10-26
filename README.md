@@ -165,6 +165,42 @@ Run the backend and seed data before checking integration:
 
 The implementation run completed the backend test suite (8/8), React production build, and Angular strict-template production build successfully. All three dependency installs reported zero vulnerabilities. MongoDB-backed integration was not run because MongoDB Server is not installed; the API startup check returned `ECONNREFUSED 127.0.0.1:27017`. The seed, cross-UI sync, correction, and persistence checklist remains to be run after MongoDB is installed and started.
 
+## Netlify deployment (React teacher portal only)
+
+The root `netlify.toml` sets the base directory to `react-teacher`, the build
+command to `npm ci && npm run build`, and the publish directory to `dist` (relative to
+the base directory). The resulting repository-relative entry point is
+`react-teacher/dist/index.html`. The command explicitly installs the React
+dependencies from its lockfile before building, including when a CLI deploy
+has not performed dependency installation. Angular and the Express backend are not built or hosted by
+this configuration. No package directory override is needed.
+
+The repository root has no `build` script, so running `npm run build` there
+fails. The React package uses Vite's `vite build` with its default `dist`
+output directory. A subsequent deploy correctly targeted `react-teacher` but
+failed with `sh: 1: vite: not found` (exit code 127). Vite was already declared
+in the React dependencies and lockfile; the build environment lacked the
+installed executable. The explicit `npm ci` step addresses this failure without
+changing application code or adding dependencies.
+
+The current app does not use React Router or URL-based
+routes, so no SPA fallback redirect is required.
+
+Before deploying, set `VITE_API_URL` in Netlify's environment settings to the
+public HTTPS backend URL including `/api`, then trigger a new deploy. Without
+it, the frontend falls back to a localhost API. Configure the separately hosted
+backend's `CLIENT_ORIGINS` to allow the frontend's HTTPS origin. Keep database
+credentials and other secrets on the backend; every `VITE_*` variable is public
+in the browser bundle. `.env` and `.env.*` are ignored, except `.env.example`;
+do not put real credentials in that example file.
+
+For a clean local verification, run `npm ci` followed by `npm run build` inside
+`react-teacher`, and confirm `dist/index.html` exists. After Netlify reports a
+successful production build, open the production URL and verify that the page,
+assets, and API-backed attendance operations work. The configuration fix alone
+does not establish a successful build or deployment; those checks remain
+pending for this change.
+
 ## Layout
 
 ```text
