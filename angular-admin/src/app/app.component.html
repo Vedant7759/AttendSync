@@ -1,0 +1,72 @@
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="brand" href="#" aria-label="AttendSync home">
+      <span class="brand-mark"><span>✓</span></span>
+      <span>Attend<span class="brand-accent">Sync</span><small>ADMIN CONSOLE</small></span>
+    </a>
+    <p class="nav-label">MANAGEMENT</p>
+    <nav class="side-nav" aria-label="Admin navigation">
+      <a class="nav-link active" href="#overview"><span>▦</span> Overview</a>
+      <a class="nav-link" href="#attendance"><span>▤</span> Attendance records</a>
+      <a class="nav-link" href="#students"><span>♙</span> Student insights</a>
+      <a class="nav-link" href="#subjects"><span>▧</span> Subjects & faculty</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sync-card"><span class="shield">✓</span><div><strong>Database connected</strong><small>Live API synchronization</small></div><i></i></div>
+      <div class="admin-profile"><div class="admin-avatar">AD</div><div><strong>Administrator</strong><small>Academic office</small></div><span class="more">•••</span></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar"><div class="crumbs">Workspace <span>/</span> <strong>Overview</strong></div><div class="top-right"><span class="live"><i></i> Live data</span><div class="bell">♧</div><div class="admin-avatar small">AD</div></div></header>
+    <section class="page">
+      <div class="page-title"><div><p class="eyebrow">ACADEMIC OVERVIEW</p><h1>Admin dashboard</h1><p class="subtitle">Monitor attendance activity across your classes.</p></div><div class="updated"><i></i> Auto-refreshing</div></div>
+
+      @if (summaryError) { <div class="alert error" role="alert">{{ summaryError }}</div> }
+      @if (recordsError) { <div class="alert error" role="alert">{{ recordsError }}</div> }
+      @if (subjectsError) { <div class="alert error" role="alert">{{ subjectsError }}</div> }
+      @if (message) { <div class="alert success" role="status">✓ &nbsp;{{ message }}</div> }
+
+      <div class="metrics" id="overview">
+        <article class="metric"><div class="metric-top"><span>Total students</span><span class="metric-icon blue">♙</span></div><strong>{{ summaryLoading ? '—' : (summary?.totalStudents ?? 0) }}</strong><small>Enrolled in the system</small></article>
+        <article class="metric"><div class="metric-top"><span>Attendance records</span><span class="metric-icon purple">▤</span></div><strong>{{ summaryLoading ? '—' : (summary?.attendanceRecords ?? 0) }}</strong><small>Saved register entries</small></article>
+        <article class="metric"><div class="metric-top"><span>Class sessions</span><span class="metric-icon amber">◷</span></div><strong>{{ summaryLoading ? '—' : (summary?.sessions ?? 0) }}</strong><small>Subject dates recorded</small></article>
+        <article class="metric"><div class="metric-top"><span>Present records</span><span class="metric-icon green">✓</span></div><strong>{{ summaryLoading ? '—' : (summary?.presentCount ?? 0) }}</strong><small>Marked present</small></article>
+      </div>
+
+      <section class="panel attendance-panel" id="attendance">
+        <div class="panel-header"><div><div class="title-line"><span class="panel-icon">▤</span><h2>Attendance activity</h2><span class="count">{{ filteredRecords.length }} records</span></div><p>Review and correct saved student attendance.</p></div><div class="filter-control"><label for="status-filter">Status</label><select id="status-filter" #statusSelect (change)="setFilter(statusSelect.value)"><option value="all">All statuses</option><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option></select><span>⌄</span></div></div>
+        <div class="table-wrap"><table class="records-table"><thead><tr><th>STUDENT</th><th>SUBJECT</th><th>DATE</th><th>STATUS</th><th>CORRECT STATUS</th></tr></thead><tbody>
+          @if (recordsLoading) { <tr><td colspan="5" class="empty">Loading records from the API…</td></tr> }
+          @else if (filteredRecords.length === 0) { <tr><td colspan="5" class="empty">{{ records.length === 0 ? 'No attendance records yet. Submit a register in the Teacher Portal.' : 'No records match this status filter.' }}</td></tr> }
+          @else { @for (record of filteredRecords; track record._id) {
+            <tr><td><div class="person"><span class="person-avatar">{{ record.student.name.slice(0, 1) }}</span><div><strong>{{ record.student.name }}</strong><small>{{ record.student.rollNumber }} · {{ record.student.section }}</small></div></div></td><td><span class="subject-name">{{ record.subject.code }}</span><small class="subject-subtitle">{{ record.subject.name }}</small></td><td>{{ record.date | date:'mediumDate':'UTC' }}</td><td><span class="status" [class.present]="record.status === 'present'" [class.absent]="record.status === 'absent'" [class.late]="record.status === 'late'"><i></i>{{ record.status }}</span></td><td><select class="correct-select" [value]="record.status" [disabled]="updatingId !== ''" (change)="onStatusChange(record, $event)"><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option></select>@if (updatingId === record._id) { <span class="saving">Saving…</span> }</td></tr>
+          } }
+        </tbody></table></div>
+        <div class="panel-foot"><span>Changes are saved to the shared database immediately.</span><span class="poll"><i></i> Polling every 3 sec</span></div>
+      </section>
+
+      <div class="lower-grid">
+        <section class="panel insights" id="students">
+          <div class="panel-header compact"><div><div class="title-line"><span class="panel-icon purple">♙</span><h2>Student attendance</h2></div><p>Attendance percentage across recorded sessions</p></div><span class="threshold">Target: 75%</span></div>
+          @if (summaryLoading) { <div class="small-empty">Loading student insights…</div> }
+          @else if ((summary?.studentPercentages?.length ?? 0) === 0) { <div class="small-empty">Percentages will appear after attendance is recorded.</div> }
+          @else { <div class="student-list">@for (item of summary?.studentPercentages; track item.student._id) {
+            <div class="student-progress"><div class="student-info"><div><strong>{{ item.student.name }}</strong><small>{{ item.student.rollNumber }} · {{ item.totalSessions }} records</small></div><strong class="percentage" [class.low]="item.percentage < 75">{{ item.percentage }}%</strong></div><div class="progress-track"><span [style.width.%]="item.percentage" [class.low-bar]="item.percentage < 75"></span></div></div>
+          }</div> }
+          <div class="legend"><span><i class="ok"></i> On track</span><span><i class="low-dot"></i> Below 75%</span></div>
+        </section>
+        <section class="panel subjects" id="subjects">
+          <div class="panel-header compact"><div><div class="title-line"><span class="panel-icon amber">▧</span><h2>Subjects & faculty</h2></div><p>Teaching assignments</p></div></div>
+          @if (subjectsLoading) { <div class="small-empty">Loading subjects…</div> }
+          @else if (subjects.length === 0) { <div class="small-empty">{{ subjectsError ? 'Subjects unavailable. Check API connectivity.' : 'No subjects found. Seed the demo data to begin.' }}</div> }
+          @else { <div class="subject-list">@for (subject of subjects; track subject._id) {
+            <div class="subject-item"><div class="book-icon">▧</div><div class="subject-copy"><strong>{{ subject.name }}</strong><small>{{ subject.code }}</small></div><div class="faculty"><span>{{ subject.facultyName.slice(0, 1) }}</span><small>{{ subject.facultyName }}</small></div></div>
+          }</div> }
+          <div class="subject-footer"><span>Subjects in the shared system</span><strong>{{ subjects.length }}</strong></div>
+        </section>
+      </div>
+      <footer class="page-footer">AttendSync <span>·</span> Cross-UI Student Attendance Management System <span class="foot-right">Administrator console</span></footer>
+    </section>
+  </main>
+</div>

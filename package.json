@@ -1,0 +1,13 @@
+{
+  "name": "attendsync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cross-UI student attendance management system",
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix react-teacher && npm install --prefix angular-admin",
+    "seed": "npm --prefix server run seed",
+    "setup": "powershell -ExecutionPolicy Bypass -File .\\scripts\\setup.ps1",
+    "start:all": "powershell -ExecutionPolicy Bypass -File .\\scripts\\start-all.ps1"
+  }
+}
+
